@@ -29,14 +29,13 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "CVForge — Beautiful CVs in Minutes" },
+      { name: "description", content: "Craft a professional CV with curated templates, palettes, and typography. Live preview, drag-and-drop sections, instant PDF export." },
+      { name: "author", content: "CVForge" },
+      { property: "og:title", content: "CVForge — Beautiful CVs in Minutes" },
+      { property: "og:description", content: "Curated templates, palettes, and typography. Live preview and instant PDF export." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       {
