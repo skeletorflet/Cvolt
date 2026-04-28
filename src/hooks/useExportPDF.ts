@@ -2,6 +2,56 @@ import { useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+/**
+ * html2canvas 1.4.x cannot parse oklch() colors (used by Tailwind v4).
+ * Walk every element in the clone and inline computed color properties
+ * that contain "oklch" as resolved hex values using a 1×1 canvas trick.
+ */
+function resolveOklch(color: string): string {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return color;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+    if (a === 0) return "transparent";
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+  } catch {
+    return color;
+  }
+}
+
+const COLOR_PROPS = [
+  "color",
+  "backgroundColor",
+  "borderTopColor",
+  "borderRightColor",
+  "borderBottomColor",
+  "borderLeftColor",
+  "outlineColor",
+  "fill",
+  "stroke",
+] as const;
+
+function inlineComputedColors(source: HTMLElement, clone: HTMLElement): void {
+  const sourceEls = [source, ...Array.from(source.querySelectorAll<HTMLElement>("*"))];
+  const cloneEls = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>("*"))];
+  const len = Math.min(sourceEls.length, cloneEls.length);
+  for (let i = 0; i < len; i++) {
+    const computed = getComputedStyle(sourceEls[i]);
+    const cloneEl = cloneEls[i];
+    for (const prop of COLOR_PROPS) {
+      const value = computed[prop as keyof CSSStyleDeclaration] as string;
+      if (value && value.includes("oklch")) {
+        (cloneEl.style as unknown as Record<string, string>)[prop] = resolveOklch(value);
+      }
+    }
+  }
+}
+
 export function useExportPDF() {
   const [isExporting, setExporting] = useState(false);
 
@@ -33,6 +83,9 @@ export function useExportPDF() {
       // One animation frame to let layout settle
       await new Promise((r) => requestAnimationFrame(r));
 
+      // Inline oklch colors so html2canvas can parse them
+      inlineComputedColors(source, clone);
+
       const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
@@ -41,6 +94,10 @@ export function useExportPDF() {
         windowWidth: 794,
         allowTaint: false,
       });
+
+      if (canvas.width === 0 || canvas.height === 0) {
+        throw new Error("Canvas rendered with zero dimensions — PDF aborted.");
+      }
 
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });

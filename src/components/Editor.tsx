@@ -1,5 +1,7 @@
 import { useCVStore } from "@/store/cvStore";
-import { Trash2, Plus, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Trash2, Plus,GripVertical, Eye, EyeOff, Wand2, ChevronDown } from "lucide-react";
+import { DesignPanel } from "@/components/DesignPanel";
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -26,6 +28,7 @@ export function Editor() {
       <CertificationsSection />
 
       <SectionOrderEditor />
+      <DesignSection />
     </div>
   );
 }
@@ -413,5 +416,28 @@ function SortableItem({ id, hidden, onToggle }: { id: string; hidden: boolean; o
         {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
       </button>
     </li>
+  );
+}
+
+function DesignSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="rounded-xl bg-card border border-border p-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold"
+      >
+        <span className="flex items-center gap-2">
+          <Wand2 size={14} className="text-primary" />
+          Design Studio
+        </span>
+        <ChevronDown size={14} className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="border-t border-border" style={{ height: 420 }}>
+          <DesignPanel />
+        </div>
+      )}
+    </section>
   );
 }

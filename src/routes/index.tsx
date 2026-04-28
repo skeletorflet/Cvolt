@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Editor } from "@/components/Editor";
 import { CVPreview } from "@/components/CVPreview";
-import { DesignPanel } from "@/components/DesignPanel";
 import { useExportPDF } from "@/hooks/useExportPDF";
 import { useGoogleFonts } from "@/hooks/useGoogleFonts";
 import { useCVStore } from "@/store/cvStore";
 import { exampleCV } from "@/data/example";
-import { Download, Sparkles, RotateCcw, FileText, Loader2, Wand2, X } from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { useState } from "react";
+import { Download, Sparkles, RotateCcw, FileText, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: CVForge,
@@ -29,7 +26,7 @@ function CVForge() {
   const personal = useCVStore((s) => s.personal);
   const loadExample = useCVStore((s) => s.loadExample);
   const reset = useCVStore((s) => s.reset);
-  const [designOpen, setDesignOpen] = useState(false);
+  // designOpen removed; Design Studio now lives in Editor sidebar
 
 
   return (
@@ -81,45 +78,7 @@ function CVForge() {
           <CVPreview />
         </section>
 
-        {/* Radix Dialog for Design Studio */}
-        <Dialog.Root open={designOpen} onOpenChange={setDesignOpen}>
-          <Dialog.Trigger asChild>
-            <button
-              onClick={() => setDesignOpen(true)}
-              className="absolute left-[calc(380px+16px)] bottom-5 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium text-primary-foreground transition hover:scale-105"
-              style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-glow)" }}
-              aria-label="Open design panel"
-            >
-              <Wand2 size={15} />
-              Design
-            </button>
-          </Dialog.Trigger>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-background/50 backdrop-blur-sm" />
-            <Dialog.Content
-              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] max-h-[85vh] rounded-xl bg-card border border-border shadow-2xl flex flex-col overflow-hidden focus:outline-none"
-            >
-              <Dialog.Title className="sr-only">Design Studio</Dialog.Title>
-              <div className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <Wand2 size={14} className="text-primary" />
-                  Design Studio
-                </div>
-                <Dialog.Close asChild>
-                  <button
-                    className="w-7 h-7 rounded-md hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
-                    aria-label="Close design panel"
-                  >
-                    <X size={15} />
-                  </button>
-                </Dialog.Close>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <DesignPanel />
-              </div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+        {/* Design Studio moved to Editor sidebar; Dialog-based implementation removed */}
       </main>
     </div>
   );
