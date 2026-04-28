@@ -7,7 +7,8 @@ import { useGoogleFonts } from "@/hooks/useGoogleFonts";
 import { useCVStore } from "@/store/cvStore";
 import { exampleCV } from "@/data/example";
 import { Download, Sparkles, RotateCcw, FileText, Loader2, Wand2, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   component: CVForge,
@@ -30,13 +31,6 @@ function CVForge() {
   const reset = useCVStore((s) => s.reset);
   const [designOpen, setDesignOpen] = useState(false);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDesignOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -87,53 +81,45 @@ function CVForge() {
           <CVPreview />
         </section>
 
-        {/* Floating Design button */}
-        {!designOpen && (
-          <button
-            onClick={() => setDesignOpen(true)}
-            className="absolute left-[calc(380px+16px)] bottom-5 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium text-primary-foreground transition hover:scale-105"
-            style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-glow)" }}
-            aria-label="Open design panel"
-          >
-            <Wand2 size={15} />
-            Design
-          </button>
-        )}
-
-        {/* Design Drawer */}
-        <div
-          className={`absolute inset-y-0 left-[380px] z-40 transition-transform duration-300 ease-out ${
-            designOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
-          }`}
-          style={{ width: 340 }}
-        >
-          <div className="h-full bg-card/95 backdrop-blur-md border-r border-border shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-4 h-12 border-b border-border">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Wand2 size={14} className="text-primary" />
-                Design Studio
+        {/* Radix Dialog for Design Studio */}
+        <Dialog.Root open={designOpen} onOpenChange={setDesignOpen}>
+          <Dialog.Trigger asChild>
+            <button
+              onClick={() => setDesignOpen(true)}
+              className="absolute left-[calc(380px+16px)] bottom-5 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium text-primary-foreground transition hover:scale-105"
+              style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-glow)" }}
+              aria-label="Open design panel"
+            >
+              <Wand2 size={15} />
+              Design
+            </button>
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-background/50 backdrop-blur-sm" />
+            <Dialog.Content
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] max-h-[85vh] rounded-xl bg-card border border-border shadow-2xl flex flex-col overflow-hidden focus:outline-none"
+            >
+              <Dialog.Title className="sr-only">Design Studio</Dialog.Title>
+              <div className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Wand2 size={14} className="text-primary" />
+                  Design Studio
+                </div>
+                <Dialog.Close asChild>
+                  <button
+                    className="w-7 h-7 rounded-md hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+                    aria-label="Close design panel"
+                  >
+                    <X size={15} />
+                  </button>
+                </Dialog.Close>
               </div>
-              <button
-                onClick={() => setDesignOpen(false)}
-                className="w-7 h-7 rounded-md hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
-                aria-label="Close design panel"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <DesignPanel />
-            </div>
-          </div>
-        </div>
-
-        {/* Backdrop */}
-        {designOpen && (
-          <div
-            onClick={() => setDesignOpen(false)}
-            className="absolute inset-0 left-[380px] z-30 bg-background/40 backdrop-blur-[2px]"
-          />
-        )}
+              <div className="flex-1 overflow-hidden">
+                <DesignPanel />
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </main>
     </div>
   );
