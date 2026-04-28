@@ -148,9 +148,8 @@ function Colors() {
   const [editing, setEditing] = useState<keyof NonNullable<typeof customColors> | null>(null);
   const current = customColors ?? palettes.find((p) => p.id === paletteId)!;
 
-  const swatch = (key: keyof typeof current, label: string) => {
-    if (key === "id" || key === "name") return null;
-    const color = (current as Record<string, string>)[key as string];
+  const swatch = (key: "primary" | "secondary" | "accent" | "text" | "background" | "muted", label: string) => {
+    const color = (current as Record<string, string>)[key];
     return (
       <button
         key={key as string}
