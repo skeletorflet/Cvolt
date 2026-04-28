@@ -6,7 +6,8 @@ import { useExportPDF } from "@/hooks/useExportPDF";
 import { useGoogleFonts } from "@/hooks/useGoogleFonts";
 import { useCVStore } from "@/store/cvStore";
 import { exampleCV } from "@/data/example";
-import { Download, Sparkles, RotateCcw, FileText, Loader2 } from "lucide-react";
+import { Download, Sparkles, RotateCcw, FileText, Loader2, Wand2, X } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/")({
   component: CVForge,
@@ -27,6 +28,15 @@ function CVForge() {
   const personal = useCVStore((s) => s.personal);
   const loadExample = useCVStore((s) => s.loadExample);
   const reset = useCVStore((s) => s.reset);
+  const [designOpen, setDesignOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDesignOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -68,17 +78,62 @@ function CVForge() {
         </div>
       </header>
 
-      {/* Main grid */}
-      <main className="flex-1 grid grid-cols-[380px_1fr_320px] overflow-hidden">
-        <aside className="border-r border-border overflow-y-auto p-4 bg-card/30">
+      {/* Main grid — preview now takes all remaining space */}
+      <main className="flex-1 grid grid-cols-[380px_1fr] overflow-hidden relative">
+        <aside className="border-r border-border overflow-y-auto p-4 bg-card/30 relative">
           <Editor />
         </aside>
-        <section className="overflow-hidden">
+        <section className="overflow-hidden relative">
           <CVPreview />
         </section>
-        <aside className="border-l border-border overflow-hidden bg-card/30">
-          <DesignPanel />
-        </aside>
+
+        {/* Floating Design button */}
+        {!designOpen && (
+          <button
+            onClick={() => setDesignOpen(true)}
+            className="absolute left-[calc(380px+16px)] bottom-5 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium text-primary-foreground transition hover:scale-105"
+            style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-glow)" }}
+            aria-label="Open design panel"
+          >
+            <Wand2 size={15} />
+            Design
+          </button>
+        )}
+
+        {/* Design Drawer */}
+        <div
+          className={`absolute inset-y-0 left-[380px] z-40 transition-transform duration-300 ease-out ${
+            designOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
+          }`}
+          style={{ width: 340 }}
+        >
+          <div className="h-full bg-card/95 backdrop-blur-md border-r border-border shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-4 h-12 border-b border-border">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Wand2 size={14} className="text-primary" />
+                Design Studio
+              </div>
+              <button
+                onClick={() => setDesignOpen(false)}
+                className="w-7 h-7 rounded-md hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+                aria-label="Close design panel"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <DesignPanel />
+            </div>
+          </div>
+        </div>
+
+        {/* Backdrop */}
+        {designOpen && (
+          <div
+            onClick={() => setDesignOpen(false)}
+            className="absolute inset-0 left-[380px] z-30 bg-background/40 backdrop-blur-[2px]"
+          />
+        )}
       </main>
     </div>
   );
