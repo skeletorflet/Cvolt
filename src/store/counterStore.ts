@@ -76,15 +76,19 @@ export const useCounterStore = create<CounterState>()(
 
 // On app boot in production: fetch the current global count so the header
 // shows the real number even before the user exports anything.
+// Deferred 3 s so the cold-start latency of the Netlify Function doesn't
+// appear in the critical render path / Lighthouse chain.
 if (IS_PRODUCTION) {
-  fetch(COUNTER_API)
-    .then((res) => res.json())
-    .then((data: { count: number }) => {
-      useCounterStore.getState().setDisplayCount(data.count);
-    })
-    .catch(() => {
-      // Fallback to localCount (already the default)
-      const { localCount } = useCounterStore.getState();
-      useCounterStore.getState().setDisplayCount(localCount);
-    });
+  setTimeout(() => {
+    fetch(COUNTER_API)
+      .then((res) => res.json())
+      .then((data: { count: number }) => {
+        useCounterStore.getState().setDisplayCount(data.count);
+      })
+      .catch(() => {
+        // Fallback to localCount (already the default)
+        const { localCount } = useCounterStore.getState();
+        useCounterStore.getState().setDisplayCount(localCount);
+      });
+  }, 3000);
 }
