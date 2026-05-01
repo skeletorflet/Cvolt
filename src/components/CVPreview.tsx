@@ -74,6 +74,9 @@ export function CVPreview() {
   const [contentHeightPx, setContentHeightPx] = useState(pageHeight);
   const [pageSlices, setPageSlices] = useState<PageSlice[]>([{ startPx: 0, endPx: pageHeight }]);
   const autoCompactOverflowRef = useRef(false);
+  const lastFitMeasureKeyRef = useRef<string>("");
+  const lastPaginationMeasureKeyRef = useRef<string>("");
+  const paginationFrameRef = useRef<number | null>(null);
 
   // auto-fit
   useEffect(() => {
@@ -82,6 +85,9 @@ export function CVPreview() {
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth - 48;
       const h = el.clientHeight - 48;
+      const nextKey = `${w}:${h}:${pageWidth}:${pageHeight}`;
+      if (nextKey === lastFitMeasureKeyRef.current) return;
+      lastFitMeasureKeyRef.current = nextKey;
       const s = Math.min(w / pageWidth, h / pageHeight, 1);
       setFitScale(Math.max(0.3, s));
     });
@@ -94,6 +100,10 @@ export function CVPreview() {
     if (!root) return;
 
     const syncMeasurement = () => {
+      const nextMeasureKey = `${root.clientWidth}:${root.clientHeight}:${root.scrollHeight}`;
+      if (nextMeasureKey === lastPaginationMeasureKeyRef.current) return;
+      lastPaginationMeasureKeyRef.current = nextMeasureKey;
+
       const { slices, contentHeightPx: nextContentHeight } = calculatePageSlicesBySections(
         root,
         pageHeight,
@@ -133,12 +143,24 @@ export function CVPreview() {
     let timerId = 0;
     const debouncedSync = () => {
       clearTimeout(timerId);
-      timerId = window.setTimeout(syncMeasurement, window.innerWidth < 768 ? 150 : 80);
+      if (paginationFrameRef.current !== null) {
+        window.cancelAnimationFrame(paginationFrameRef.current);
+      }
+      timerId = window.setTimeout(() => {
+        paginationFrameRef.current = window.requestAnimationFrame(() => {
+          paginationFrameRef.current = null;
+          syncMeasurement();
+        });
+      }, window.innerWidth < 768 ? 180 : 96);
     };
     const ro = new ResizeObserver(debouncedSync);
     ro.observe(root);
     return () => {
       clearTimeout(timerId);
+      if (paginationFrameRef.current !== null) {
+        window.cancelAnimationFrame(paginationFrameRef.current);
+        paginationFrameRef.current = null;
+      }
       ro.disconnect();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
