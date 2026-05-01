@@ -23,6 +23,8 @@ const COUNTER_API = "/api/counter";
 // True when running in a real deployment (not localhost / Vite dev server)
 const IS_PRODUCTION =
   typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname);
+const ENABLE_GLOBAL_COUNTER =
+  typeof import.meta !== "undefined" && import.meta.env.VITE_ENABLE_GLOBAL_COUNTER === "true";
 
 interface CounterState {
   /** Persisted local count for this browser */
@@ -52,7 +54,7 @@ export const useCounterStore = create<CounterState>()(
         const nextLocal = get().localCount + 1;
         set({ localCount: nextLocal, displayCount: nextLocal });
 
-        if (!IS_PRODUCTION) return;
+        if (!IS_PRODUCTION || !ENABLE_GLOBAL_COUNTER) return;
 
         // Hit the global counter API
         try {
@@ -78,7 +80,7 @@ export const useCounterStore = create<CounterState>()(
 // shows the real number even before the user exports anything.
 // Deferred 3 s so the cold-start latency of the Netlify Function doesn't
 // appear in the critical render path / Lighthouse chain.
-if (IS_PRODUCTION) {
+if (IS_PRODUCTION && ENABLE_GLOBAL_COUNTER) {
   setTimeout(() => {
     fetch(COUNTER_API)
       .then((res) => res.json())

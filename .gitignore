@@ -43,3 +43,4 @@ coverage/
 # Local deploy packages
 deploy.zip
 deploy.tar.gz
+.vercel
