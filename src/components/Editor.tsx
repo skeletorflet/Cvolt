@@ -1,7 +1,14 @@
 import { useCVStore } from "@/store/cvStore";
 import { Trash2, Plus, GripVertical, Eye, EyeOff } from "lucide-react";
 import { AvatarEditorDialog } from "@/components/AvatarEditorDialog";
+import { DesignPanel } from "@/components/DesignPanel";
 import { useI18n } from "@/hooks/useI18n";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   DndContext,
   closestCenter,
@@ -19,19 +26,66 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 export function Editor() {
-  return (
-    <div className="space-y-6">
-      <PersonalSection />
-      <SummarySection />
-      <ExperienceSection />
-      <EducationSection />
-      <SkillsSection />
-      <ProjectsSection />
-      <LanguagesSection />
-      <CertificationsSection />
+  const { m } = useI18n();
 
-      <SectionOrderEditor />
-    </div>
+  return (
+    <Accordion type="single" collapsible defaultValue="design" className="space-y-2">
+      <AccordionItem value="design" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">
+          {m.preview.presetsLayout}
+        </AccordionTrigger>
+        <AccordionContent className="pb-3">
+          <div className="rounded-lg border border-border bg-background/30 max-h-[420px] overflow-auto themed-scrollbar">
+            <DesignPanel />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="personal" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.personal}</AccordionTrigger>
+        <AccordionContent className="pb-3"><PersonalSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="summary" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.summaryTitle}</AccordionTrigger>
+        <AccordionContent className="pb-3"><SummarySection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="experience" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.experience}</AccordionTrigger>
+        <AccordionContent className="pb-3"><ExperienceSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="education" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.education}</AccordionTrigger>
+        <AccordionContent className="pb-3"><EducationSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="skills" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.skills}</AccordionTrigger>
+        <AccordionContent className="pb-3"><SkillsSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="projects" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.projects}</AccordionTrigger>
+        <AccordionContent className="pb-3"><ProjectsSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="languages" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.languages}</AccordionTrigger>
+        <AccordionContent className="pb-3"><LanguagesSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="certifications" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.certifications}</AccordionTrigger>
+        <AccordionContent className="pb-3"><CertificationsSection inAccordion /></AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="order" className="rounded-xl border border-border bg-card px-3">
+        <AccordionTrigger className="py-3 text-sm font-semibold tracking-wide hover:no-underline">{m.editor.sectionOrder}</AccordionTrigger>
+        <AccordionContent className="pb-3"><SectionOrderEditor inAccordion /></AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -105,17 +159,33 @@ function Card({
   children,
   onAdd,
   addLabel = "Add",
+  inAccordion = false,
 }: {
   title: string;
   children: React.ReactNode;
   onAdd?: () => void;
   addLabel?: string;
+  inAccordion?: boolean;
 }) {
   return (
-    <section className="rounded-xl bg-card border border-border p-4">
-      <header className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold tracking-wide">{title}</h2>
-        {onAdd && (
+    <section className={inAccordion ? "" : "rounded-xl bg-card border border-border p-4"}>
+      {!inAccordion && (
+        <header className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold tracking-wide">{title}</h2>
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              aria-label={addLabel}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-primary/15 text-primary hover:bg-primary/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            >
+              <Plus size={12} aria-hidden="true" />
+              <span>{addLabel}</span>
+            </button>
+          )}
+        </header>
+      )}
+      {inAccordion && onAdd && (
+        <div className="flex justify-end mb-2">
           <button
             onClick={onAdd}
             aria-label={addLabel}
@@ -124,8 +194,8 @@ function Card({
             <Plus size={12} aria-hidden="true" />
             <span>{addLabel}</span>
           </button>
-        )}
-      </header>
+        </div>
+      )}
       {children}
     </section>
   );
@@ -147,11 +217,11 @@ function Entry({ children, onRemove }: { children: React.ReactNode; onRemove: ()
 }
 
 /* ---------- sections ---------- */
-function PersonalSection() {
+function PersonalSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { personal, setPersonal } = useCVStore();
   return (
-    <Card title={m.editor.personal}>
+    <Card title={m.editor.personal} inAccordion={inAccordion}>
       <div className="mb-3">
         <AvatarEditorDialog />
       </div>
@@ -203,11 +273,11 @@ function PersonalSection() {
   );
 }
 
-function SummarySection() {
+function SummarySection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { personal, setPersonal } = useCVStore();
   return (
-    <Card title={m.editor.summaryTitle}>
+    <Card title={m.editor.summaryTitle} inAccordion={inAccordion}>
       <TextArea
         label={m.editor.summaryLabel}
         value={personal.summary}
@@ -222,11 +292,11 @@ function SummarySection() {
   );
 }
 
-function ExperienceSection() {
+function ExperienceSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { experience, addExperience, updateExperience, removeExperience } = useCVStore();
   return (
-    <Card title={m.editor.experience} onAdd={addExperience} addLabel={m.editor.add}>
+    <Card title={m.editor.experience} onAdd={addExperience} addLabel={m.editor.add} inAccordion={inAccordion}>
       {experience.map((e) => (
         <Entry key={e.id} onRemove={() => removeExperience(e.id)}>
           <FieldGroup>
@@ -308,11 +378,11 @@ function ExperienceSection() {
   );
 }
 
-function EducationSection() {
+function EducationSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { education, addEducation, updateEducation, removeEducation } = useCVStore();
   return (
-    <Card title={m.editor.education} onAdd={addEducation} addLabel={m.editor.add}>
+    <Card title={m.editor.education} onAdd={addEducation} addLabel={m.editor.add} inAccordion={inAccordion}>
       {education.map((e) => (
         <Entry key={e.id} onRemove={() => removeEducation(e.id)}>
           <FieldGroup>
@@ -357,11 +427,11 @@ function EducationSection() {
   );
 }
 
-function SkillsSection() {
+function SkillsSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { skills, addSkill, updateSkill, removeSkill } = useCVStore();
   return (
-    <Card title={m.editor.skills} onAdd={addSkill} addLabel={m.editor.add}>
+    <Card title={m.editor.skills} onAdd={addSkill} addLabel={m.editor.add} inAccordion={inAccordion}>
       <div className="space-y-1.5">
         {skills.map((s) => (
           <div key={s.id} className="flex items-center gap-2">
@@ -393,11 +463,11 @@ function SkillsSection() {
   );
 }
 
-function LanguagesSection() {
+function LanguagesSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { languages, addLanguage, updateLanguage, removeLanguage } = useCVStore();
   return (
-    <Card title={m.editor.languages} onAdd={addLanguage} addLabel={m.editor.add}>
+    <Card title={m.editor.languages} onAdd={addLanguage} addLabel={m.editor.add} inAccordion={inAccordion}>
       <div className="space-y-1.5">
         {languages.map((l) => (
           <div key={l.id} className="flex gap-2">
@@ -431,11 +501,11 @@ function LanguagesSection() {
   );
 }
 
-function ProjectsSection() {
+function ProjectsSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { projects, addProject, updateProject, removeProject } = useCVStore();
   return (
-    <Card title={m.editor.projects} onAdd={addProject} addLabel={m.editor.add}>
+    <Card title={m.editor.projects} onAdd={addProject} addLabel={m.editor.add} inAccordion={inAccordion}>
       {projects.map((p) => (
         <Entry key={p.id} onRemove={() => removeProject(p.id)}>
           <FieldGroup>
@@ -479,12 +549,12 @@ function ProjectsSection() {
   );
 }
 
-function CertificationsSection() {
+function CertificationsSection({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m } = useI18n();
   const { certifications, addCertification, updateCertification, removeCertification } =
     useCVStore();
   return (
-    <Card title={m.editor.certifications} onAdd={addCertification} addLabel={m.editor.add}>
+    <Card title={m.editor.certifications} onAdd={addCertification} addLabel={m.editor.add} inAccordion={inAccordion}>
       {certifications.map((c) => (
         <Entry key={c.id} onRemove={() => removeCertification(c.id)}>
           <FieldGroup>
@@ -521,7 +591,7 @@ function Empty({ msg }: { msg: string }) {
 }
 
 /* ---------- Section order DnD ---------- */
-function SectionOrderEditor() {
+function SectionOrderEditor({ inAccordion = false }: { inAccordion?: boolean }) {
   const { m, sectionTitleById } = useI18n();
   const { sectionOrder, hiddenSections, setSectionOrder, toggleSection } = useCVStore();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
@@ -535,7 +605,7 @@ function SectionOrderEditor() {
   };
 
   return (
-    <Card title={m.editor.sectionOrder}>
+    <Card title={m.editor.sectionOrder} inAccordion={inAccordion}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
           <ul className="space-y-1">

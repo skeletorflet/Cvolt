@@ -76,10 +76,16 @@ function Cvolt() {
   // Mobile tabs — controls which panel is mounted/rendered
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [bootReady, setBootReady] = useState(false);
 
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setBootReady(true), 0);
+    return () => window.clearTimeout(id);
+  }, []);
 
   // On mobile, PDF export only works from preview tab (where #cv-preview exists)
   const handleExport = () => {
@@ -234,11 +240,11 @@ function Cvolt() {
           {/* Download PDF */}
           <button
             onClick={handleExport}
-            disabled={isExporting}
+            disabled={isExporting || !bootReady}
             className="inline-flex items-center gap-1.5 md:gap-2 text-xs md:text-sm px-3 md:px-4 py-1.5 rounded-md font-medium text-primary-foreground transition-all disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
             style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-glow)" }}
             aria-label={isExporting ? m.header.rendering : m.header.downloadPdf}
-            aria-busy={isExporting}
+            aria-busy={isExporting || !bootReady}
           >
             {isExporting ? (
               <Loader2 size={13} className="animate-spin" aria-hidden="true" />
@@ -304,7 +310,15 @@ function Cvolt() {
           )}
           aria-label="CV editor"
         >
-          <Editor />
+          {bootReady ? (
+            <Editor />
+          ) : (
+            <div className="space-y-4 animate-pulse" aria-hidden>
+              <div className="h-24 rounded-xl bg-muted/40" />
+              <div className="h-24 rounded-xl bg-muted/40" />
+              <div className="h-24 rounded-xl bg-muted/40" />
+            </div>
+          )}
 
           {/* Mobile-only: load example + reset at the bottom of editor */}
           <div className="md:hidden mt-6 pt-4 border-t border-border flex gap-2">
@@ -336,7 +350,14 @@ function Cvolt() {
           aria-label="CV preview"
         >
           {/* Only mount CVPreview when visible — prevents background rendering on mobile */}
-          {(!isMobile || mobileTab === "preview") && <CVPreview />}
+          {(!isMobile || mobileTab === "preview") &&
+            (bootReady ? (
+              <CVPreview />
+            ) : (
+              <div className="h-full w-full p-6" aria-hidden>
+                <div className="mx-auto h-full max-w-[820px] rounded-xl bg-muted/40 animate-pulse" />
+              </div>
+            ))}
         </section>
       </main>
 

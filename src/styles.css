@@ -165,6 +165,13 @@
   min-height: var(--cv-page-height, 0px);
 }
 
+/* Many templates use `h-full` at their root and inside grid sidebars.
+   In the single-render preview path, percentage heights need a concrete base
+   to avoid short sidebars that stop before the page bottom. */
+.cv-page-template > .h-full {
+  height: var(--cv-page-height, 0px);
+}
+
 .cv-page-template.cv-compact-mode {
   font-size: 0.965em;
 }

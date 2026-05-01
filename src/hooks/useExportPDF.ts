@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useCounterStore } from "@/store/counterStore";
-import jsPDF from "jspdf";
 import { useCVStore } from "@/store/cvStore";
 import { getPaperSize } from "@/data/paperSizes";
 import { getTemplate } from "@/components/templates";
@@ -94,7 +93,10 @@ export function useExportPDF() {
     try {
       // 1. Dynamic-import the heavy PDF/capture libraries so they are excluded
       //    from the initial bundle and only fetched when the user exports.
-      const [{ toJpeg, getFontEmbedCSS }] = await Promise.all([import("html-to-image")]);
+      const [{ toJpeg, getFontEmbedCSS }, { default: jsPDF }] = await Promise.all([
+        import("html-to-image"),
+        import("jspdf"),
+      ]);
 
       // 2. Fonts must be ready before embedding
       await document.fonts.ready;

@@ -6,6 +6,13 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Ensure API requests always hit Netlify Functions before SPA fallback
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
+  status = 200
+  force  = true
+
 # SPA fallback — every URL serves index.html so TanStack Router handles routing
 [[redirects]]
   from   = "/*"
