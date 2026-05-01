@@ -5,8 +5,7 @@ import { palettes } from "@/data/palettes";
 import { fontPairs } from "@/data/fonts";
 import { paperSizes } from "@/data/paperSizes";
 import { useI18n } from "@/hooks/useI18n";
-import { HexColorPicker } from "react-colorful";
-import { Palette as PaletteIcon, Type, LayoutTemplate, ChevronDown } from "lucide-react";
+import { Palette as PaletteIcon, Type, LayoutTemplate } from "lucide-react";
 
 const templateCategories: Array<"All" | TemplateCategory> = [
   "All",
@@ -265,44 +264,30 @@ function MiniThumb({
 function Colors() {
   const { m, paletteName } = useI18n();
   const { paletteId, setPalette, customColors, setCustomColors } = useCVStore();
-  const [editing, setEditing] = useState<keyof NonNullable<typeof customColors> | null>(null);
-  const current = customColors ?? palettes.find((p) => p.id === paletteId)!;
-
-  const swatch = (key: "primary" | "secondary" | "accent" | "text" | "background" | "muted", label: string) => {
-    const color = (current as Record<string, string>)[key];
-    return (
-      <button
-        key={key as string}
-        onClick={() => {
-          if (!customColors) {
-            const base = palettes.find((p) => p.id === paletteId)!;
-            setCustomColors({ primary: base.primary, secondary: base.secondary, accent: base.accent, text: base.text, background: base.background, muted: base.muted });
-          }
-          setEditing(editing === key ? null : (key as never));
-        }}
-        className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md border border-border bg-background/40 text-xs hover:border-primary/50 transition"
-      >
-        <span className="w-4 h-4 rounded border border-border" style={{ background: color }} />
-        <span className="flex-1 text-left text-muted-foreground capitalize">{label}</span>
-        <span className="text-[10px] text-muted-foreground font-mono">{color}</span>
-        <ChevronDown size={12} className={`text-muted-foreground transition ${editing === key ? "rotate-180" : ""}`} />
-      </button>
-    );
-  };
 
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">{m.design.presets}</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{m.design.presets}</div>
+          {customColors && (
+            <button onClick={() => setCustomColors(null)} className="text-[10px] text-primary hover:underline">
+              {m.design.reset}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-1.5">
           {palettes.map((p) => {
             const active = !customColors && paletteId === p.id;
             return (
               <button
                 key={p.id}
-                onClick={() => setPalette(p.id)}
+                onClick={() => {
+                  setPalette(p.id);
+                  if (customColors) setCustomColors(null);
+                }}
                 className={`flex items-center gap-2 p-1.5 rounded-md border transition ${
-                  active ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                  active ? "border-primary bg-primary/10" : "border-border hover:border-primary/50 bg-background/40"
                 }`}
               >
                 <div className="flex -space-x-1">
@@ -314,37 +299,6 @@ function Colors() {
               </button>
             );
           })}
-        </div>
-      </div>
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{m.design.custom}</div>
-          {customColors && (
-            <button onClick={() => setCustomColors(null)} className="text-[10px] text-primary hover:underline">
-              {m.design.reset}
-            </button>
-          )}
-        </div>
-        <div className="space-y-1">
-          {(["primary", "secondary", "accent", "text", "background", "muted"] as const).map((k) => (
-            <div key={k}>
-              {swatch(k, k)}
-              {editing === k && customColors && (
-                <div className="mt-2 p-2 rounded-md bg-background/60 border border-border">
-                  <HexColorPicker
-                    color={customColors[k]}
-                    onChange={(c) => setCustomColors({ ...customColors, [k]: c })}
-                    style={{ width: "100%", height: 140 }}
-                  />
-                  <input
-                    value={customColors[k]}
-                    onChange={(e) => setCustomColors({ ...customColors, [k]: e.target.value })}
-                    className="mt-2 w-full rounded-md bg-input border border-border px-2 py-1 text-xs font-mono"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
         </div>
       </div>
     </div>
