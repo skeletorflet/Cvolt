@@ -47,7 +47,7 @@ export const Route = createRootRoute({
       // Theme color for browser chrome (Android / Chrome)
       { name: "theme-color", content: "#ffffff" },
       // MS Tile (Windows pinned sites)
-      { name: "msapplication-TileImage", content: "/appicon256x256.svg" },
+      { name: "msapplication-TileImage", content: "/appicon256x256.png" },
       { name: "msapplication-TileColor", content: "#ffffff" },
     ],
     links: [
@@ -55,21 +55,21 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: appCss,
       },
-      // Favicon – SVG (modern browsers)
+      // Favicon
       {
         rel: "icon",
-        type: "image/svg+xml",
-        href: "/favicon.svg",
+        type: "image/png",
+        href: "/favicon.png",
       },
       // Fallback favicon for older browsers
       {
         rel: "shortcut icon",
-        href: "/favicon.svg",
+        href: "/favicon.png",
       },
       // Apple Touch Icon (iOS home screen)
       {
         rel: "apple-touch-icon",
-        href: "/appicon256x256.svg",
+        href: "/appicon256x256.png",
       },
       // PWA Manifest
       {

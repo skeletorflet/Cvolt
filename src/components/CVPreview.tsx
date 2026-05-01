@@ -46,7 +46,12 @@ export function CVPreview() {
   const compactMode = state.compactMode;
 
   const wrapRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
+  // measureEl uses a ref-callback + state so the pagination effect re-runs
+  // when the lazy template resolves its Suspense boundary and mounts the div.
+  // With a plain useRef, measureRef.current is null on the first effect run
+  // (template chunk still loading), the ResizeObserver is never set up, and
+  // the CV preview stays blank/unpaginated until the user resizes the window.
+  const [measureEl, setMeasureEl] = useState<HTMLDivElement | null>(null);
   const [fitScale, setFitScale] = useState(0.75);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [autoCompactOverflow, setAutoCompactOverflow] = useState(false);
@@ -70,7 +75,7 @@ export function CVPreview() {
   }, [pageHeight, pageWidth]);
 
   useEffect(() => {
-    const root = measureRef.current;
+    const root = measureEl;
     if (!root) return;
 
     const syncMeasurement = () => {
@@ -130,7 +135,7 @@ export function CVPreview() {
       ro.disconnect();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageHeight]);
+  }, [pageHeight, measureEl]);
   // NOTE: `state` intentionally excluded from deps. The ResizeObserver fires
   // automatically when template DOM changes (user edits content). Including
   // the full Zustand state here would tear down / recreate the observer on
@@ -333,7 +338,7 @@ export function CVPreview() {
             }
           >
             <div
-              ref={measureRef}
+              ref={setMeasureEl}
               className={cn("cv-page-template", compactEnabled && "cv-compact-mode")}
               style={{ "--cv-page-height": `${pageHeight}px` } as React.CSSProperties}
             >

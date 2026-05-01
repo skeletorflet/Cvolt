@@ -119,7 +119,7 @@ function Cvolt() {
           aria-label="Cvolt — go to home"
         >
           <img
-            src="/appicon256x256.svg"
+            src="/appicon256x256.png"
             alt=""
             aria-hidden="true"
             width={28}
