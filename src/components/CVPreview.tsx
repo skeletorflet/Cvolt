@@ -79,8 +79,20 @@ export function CVPreview() {
         pageHeight,
         DEFAULT_PAGE_BOTTOM_SAFE_MARGIN_PX,
       );
-      setContentHeightPx(nextContentHeight);
-      setPageSlices(slices);
+      // Use functional setters with comparison to avoid triggering re-renders
+      // when the measured values haven't actually changed. A naive setState call
+      // with a new array/value on every measurement causes an Observer → render
+      // → Observer feedback loop that freezes the browser.
+      setContentHeightPx((prev) => (prev === nextContentHeight ? prev : nextContentHeight));
+      setPageSlices((prev) => {
+        if (
+          prev.length === slices.length &&
+          slices.every((s, i) => s.startPx === prev[i].startPx && s.endPx === prev[i].endPx)
+        ) {
+          return prev;
+        }
+        return slices;
+      });
       const overflowDelta = nextContentHeight - pageHeight;
 
       // Use hysteresis to avoid compact-mode oscillation near the page-height boundary.
@@ -117,7 +129,12 @@ export function CVPreview() {
       clearTimeout(timerId);
       ro.disconnect();
     };
-  }, [pageHeight, state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageHeight]);
+  // NOTE: `state` intentionally excluded from deps. The ResizeObserver fires
+  // automatically when template DOM changes (user edits content). Including
+  // the full Zustand state here would tear down / recreate the observer on
+  // every keystroke, forcing dozens of forced-layout DOM reads per second.
 
   const compactEnabled =
     compactMode === "compact" || (compactMode === "auto" && autoCompactOverflow);

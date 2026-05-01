@@ -14,15 +14,20 @@ import {
 } from "@/components/ui/dialog";
 
 /** Maximum dimension (px) for stored avatar images.
- *  At 512px a face is perfectly sharp for any CV template while keeping
- *  the base64 payload under ~120 KB — vs. 4-7 MB for a raw iPhone photo. */
-const AVATAR_MAX_PX = 512;
+ *  On mobile we cap at 320px — toDataURL() is synchronous and blocks the
+ *  main thread on iOS Safari; smaller canvas = significantly less work.
+ *  On desktop 512px keeps faces sharp for any CV template (~120 KB base64). */
+const AVATAR_MAX_PX = typeof window !== "undefined" && window.innerWidth < 768 ? 320 : 512;
 const AVATAR_QUALITY = 0.88;
 
 /**
  * Resize + compress an image File to a JPEG data-URL.
- * Uses createObjectURL (no FileReader) + canvas to keep the main thread
- * responsive on iOS Safari.
+ * Uses createObjectURL (no FileReader) + canvas.
+ *
+ * The actual canvas work is wrapped in setTimeout(fn, 0) so the main thread
+ * yields BEFORE the expensive drawImage/toDataURL calls. On iOS Safari,
+ * toDataURL on a 12 MP photo can block for 2-3 s; deferring it lets React
+ * render the uploading spinner first, keeping the UI responsive.
  */
 function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -30,33 +35,37 @@ function compressImage(file: File): Promise<string> {
     const img = new Image();
 
     img.onload = () => {
-      try {
-        let { naturalWidth: w, naturalHeight: h } = img;
+      // Yield the main thread so the loading spinner can paint before we
+      // do the heavy synchronous canvas work (critical on iOS Safari).
+      setTimeout(() => {
+        try {
+          let { naturalWidth: w, naturalHeight: h } = img;
 
-        // Downscale maintaining aspect ratio
-        if (w > AVATAR_MAX_PX || h > AVATAR_MAX_PX) {
-          if (w >= h) {
-            h = Math.round((h * AVATAR_MAX_PX) / w);
-            w = AVATAR_MAX_PX;
-          } else {
-            w = Math.round((w * AVATAR_MAX_PX) / h);
-            h = AVATAR_MAX_PX;
+          // Downscale maintaining aspect ratio
+          if (w > AVATAR_MAX_PX || h > AVATAR_MAX_PX) {
+            if (w >= h) {
+              h = Math.round((h * AVATAR_MAX_PX) / w);
+              w = AVATAR_MAX_PX;
+            } else {
+              w = Math.round((w * AVATAR_MAX_PX) / h);
+              h = AVATAR_MAX_PX;
+            }
           }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("No 2d context");
+
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", AVATAR_QUALITY));
+        } catch (err) {
+          reject(err);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
         }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("No 2d context");
-
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", AVATAR_QUALITY));
-      } catch (err) {
-        reject(err);
-      } finally {
-        URL.revokeObjectURL(objectUrl);
-      }
+      }, 0);
     };
 
     img.onerror = () => {
