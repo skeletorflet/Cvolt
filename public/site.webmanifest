@@ -1,0 +1,17 @@
+{
+  "name": "Cvolt",
+  "short_name": "Cvolt",
+  "description": "Craft a professional CV with curated templates, palettes, and typography. Live preview, drag-and-drop sections, instant PDF export.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/appicon256x256.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

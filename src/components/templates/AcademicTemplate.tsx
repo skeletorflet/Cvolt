@@ -1,7 +1,10 @@
 import type { TemplateProps } from "./index";
 import { ExperienceList, EducationList, SkillsTags, LanguagesList, ProjectsList, CertificationsList } from "./_shared";
+import { AvatarPhoto } from "@/components/AvatarPhoto";
+import { useI18n } from "@/hooks/useI18n";
 
 export function AcademicTemplate({ data, palette, fonts }: TemplateProps) {
+  const { m, sectionTitleLabel } = useI18n();
   const { personal, sectionOrder, hiddenSections } = data;
   const visible = sectionOrder.filter((s) => !hiddenSections.includes(s));
 
@@ -10,20 +13,31 @@ export function AcademicTemplate({ data, palette, fonts }: TemplateProps) {
       className="w-full h-full p-[20mm]"
       style={{ backgroundColor: palette.background, color: palette.text, fontFamily: `'${fonts.body}', serif` }}
     >
-      <header className="mb-5">
-        <h1 className="text-[22pt] font-bold" style={{ fontFamily: `'${fonts.heading}', serif`, color: palette.primary }}>
-          {personal.name || "Your Name"}
-        </h1>
-        {personal.title && <div className="text-[11pt]" style={{ color: palette.secondary }}>{personal.title}</div>}
-        <div className="text-[9.5pt] mt-1" style={{ color: palette.muted }}>
-          {[personal.email, personal.phone, personal.location, personal.website].filter(Boolean).join(" · ")}
+      <header className="mb-5 flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[22pt] font-bold" style={{ fontFamily: `'${fonts.heading}', serif`, color: palette.primary }}>
+            {personal.name || m.common.yourName}
+          </h1>
+          {personal.title && <div className="text-[11pt]" style={{ color: palette.secondary }}>{personal.title}</div>}
+          <div className="text-[9.5pt] mt-1" style={{ color: palette.muted }}>
+            {[personal.email, personal.phone, personal.location, personal.website].filter(Boolean).join(" · ")}
+          </div>
+        </div>
+        <div className="pt-1">
+          <AvatarPhoto
+            src={personal.photo}
+            settings={data.avatar}
+            size={84}
+            maxSize={78}
+            borderColorFallback={palette.primary}
+          />
         </div>
       </header>
 
       {visible.map((id) => {
         const Heading = (t: string) => (
           <h2 className="text-[11pt] font-bold uppercase tracking-wider mb-1.5 mt-4 pb-0.5 border-b" style={{ borderColor: palette.primary, color: palette.primary }}>
-            {t}
+            {sectionTitleLabel(t)}
           </h2>
         );
         switch (id) {

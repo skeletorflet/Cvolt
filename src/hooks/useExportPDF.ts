@@ -1,127 +1,222 @@
 import { useState } from "react";
-import html2canvas from "html2canvas";
+import { useCounterStore } from "@/store/counterStore";
 import jsPDF from "jspdf";
+import { useCVStore } from "@/store/cvStore";
+import { getPaperSize } from "@/data/paperSizes";
+import { getTemplate } from "@/components/templates";
+import { palettes } from "@/data/palettes";
+import {
+  calculatePageSlicesBySections,
+  DEFAULT_PAGE_OVERFLOW_EPSILON_PX,
+  DEFAULT_PAGE_BOTTOM_SAFE_MARGIN_PX,
+  PAGE_TOP_CONTINUATION_MARGIN_PX,
+} from "@/lib/pagination";
 
 /**
- * html2canvas 1.4.x cannot parse oklch() colors (used by Tailwind v4).
- * Walk every element in the clone and inline computed color properties
- * that contain "oklch" as resolved hex values using a 1×1 canvas trick.
+ * Export strategy — uses html-to-image (toJpeg):
+ *
+ * WHY NOT html2canvas?
+ *   html2canvas v1.4.1 crashes on `oklch()` colors which the app design-system
+ *   uses extensively via Tailwind CSS custom properties.
+ *
+ * THE ROOT CAUSE OF BLANK PDFs (and the fix):
+ *   html-to-image serialises the element into an SVG <foreignObject>. Inside
+ *   that SVG context, `position:fixed` is relative to the SVG viewport (not the
+ *   browser viewport). So the element at `left:-20000px` ends up 20000 px
+ *   off-canvas → entire image is blank white.
+ *
+ *   Fix: temporarily set `left:0` on the element right before capture.
+ *   The element already has `zIndex:-1`, so it sits behind every UI layer and
+ *   the user never sees it flash. After capture we restore `left:-20000px`.
+ *
+ * Steps:
+ *   1. Wait for fonts
+ *   2. Move #cv-preview to left:0 (stays invisible via zIndex:-1)
+ *   3. Embed fonts + inline all document CSS (so oklch/Tailwind render in SVG)
+ *   4. toJpeg at 2× pixel-ratio
+ *   5. Restore left:-20000px
+ *   6. Compose multi-page jsPDF with section-aware slices + white mask
  */
-function resolveOklch(color: string): string {
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1;
-    canvas.height = 1;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return color;
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 1, 1);
-    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-    if (a === 0) return "transparent";
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-  } catch {
-    return color;
-  }
+
+/**
+ * Parse any CSS hex colour string to an [R, G, B] tuple for jsPDF.
+ * Supports #rrggbb and #rgb formats. Falls back to white on failure.
+ */
+function parseColorToRgb(color: string): [number, number, number] {
+  const s = color.trim();
+  const m6 = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s);
+  if (m6) return [parseInt(m6[1], 16), parseInt(m6[2], 16), parseInt(m6[3], 16)];
+  const m3 = /^#([a-f\d])([a-f\d])([a-f\d])$/i.exec(s);
+  if (m3)
+    return [parseInt(m3[1] + m3[1], 16), parseInt(m3[2] + m3[2], 16), parseInt(m3[3] + m3[3], 16)];
+  return [255, 255, 255];
 }
 
-const COLOR_PROPS = [
-  "color",
-  "backgroundColor",
-  "borderTopColor",
-  "borderRightColor",
-  "borderBottomColor",
-  "borderLeftColor",
-  "outlineColor",
-  "fill",
-  "stroke",
-] as const;
-
-function inlineComputedColors(source: HTMLElement, clone: HTMLElement): void {
-  const sourceEls = [source, ...Array.from(source.querySelectorAll<HTMLElement>("*"))];
-  const cloneEls = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>("*"))];
-  const len = Math.min(sourceEls.length, cloneEls.length);
-  for (let i = 0; i < len; i++) {
-    const computed = getComputedStyle(sourceEls[i]);
-    const cloneEl = cloneEls[i];
-    for (const prop of COLOR_PROPS) {
-      const value = computed[prop as keyof CSSStyleDeclaration] as string;
-      if (value && value.includes("oklch")) {
-        (cloneEl.style as unknown as Record<string, string>)[prop] = resolveOklch(value);
+/** Collect all CSS text from document stylesheets (same-origin only). */
+function collectDocumentCSS(): string {
+  const parts: string[] = [];
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        parts.push(rule.cssText);
       }
+    } catch {
+      // cross-origin sheet — skip
     }
   }
+  return parts.join("\n");
 }
+
+const isSafari =
+  typeof navigator !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 export function useExportPDF() {
   const [isExporting, setExporting] = useState(false);
+  const templateId = useCVStore((s) => s.templateId);
+  const pageSizeId = useCVStore((s) => s.pageSizeId);
+  const pageSizeMode = useCVStore((s) => s.pageSizeMode);
+  const paletteId = useCVStore((s) => s.paletteId);
+  const customColors = useCVStore((s) => s.customColors);
+
+  const recordExport = useCounterStore((s) => s.recordExport);
 
   const exportPDF = async (filename = "CV.pdf") => {
-    const source = document.getElementById("cv-preview");
-    if (!source) return;
+    const el = document.getElementById("cv-preview");
+    if (!el) return;
+
+    const tpl = getTemplate(templateId);
+    const pageSize = getPaperSize(
+      pageSizeMode === "manual" ? pageSizeId : (tpl.recommendedPaperSizeId ?? "a4"),
+    );
 
     setExporting(true);
-    let offscreen: HTMLDivElement | null = null;
 
     try {
-      // Wait for all fonts to be fully loaded before rendering
+      // 1. Dynamic-import the heavy PDF/capture libraries so they are excluded
+      //    from the initial bundle and only fetched when the user exports.
+      const [{ toJpeg, getFontEmbedCSS }] = await Promise.all([import("html-to-image")]);
+
+      // 2. Fonts must be ready before embedding
       await document.fonts.ready;
 
-      // Create an off-screen container at native A4 width, no transform
-      offscreen = document.createElement("div");
-      offscreen.style.cssText =
-        "position:fixed;top:-99999px;left:-99999px;width:794px;height:auto;overflow:visible;z-index:-9999;pointer-events:none;background:#ffffff;";
-      document.body.appendChild(offscreen);
+      // 3. Move element into the SVG viewport so foreignObject renders it.
+      //    zIndex:-1 keeps it invisible behind all UI layers.
+      const origLeft = el.style.left;
+      el.style.left = "0px";
 
-      // Clone the CV content (bypasses the scale() transform wrapper)
-      const clone = source.cloneNode(true) as HTMLElement;
-      clone.style.transform = "none";
-      clone.style.width = "794px";
-      clone.style.minHeight = "auto";
-      clone.style.position = "static";
-      offscreen.appendChild(clone);
+      let dataUrl = "";
+      try {
+        // 4. Embed fonts + inline all Tailwind/CSS so the SVG foreignObject has them
+        const fontEmbedCSS = await getFontEmbedCSS(el);
+        const cssStyles = collectDocumentCSS();
 
-      // One animation frame to let layout settle
-      await new Promise((r) => requestAnimationFrame(r));
+        const captureWidth = pageSize.widthPx;
+        const captureHeight = Math.max(el.scrollHeight, pageSize.heightPx);
 
-      // Inline oklch colors so html2canvas can parse them
-      inlineComputedColors(source, clone);
+        const captureOptions = {
+          quality: 0.95,
+          pixelRatio: 2,
+          backgroundColor: "#ffffff",
+          width: captureWidth,
+          height: captureHeight,
+          fontEmbedCSS,
+          cssStyles,
+        };
 
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        windowWidth: 794,
-        allowTaint: false,
-      });
+        // 5. Safari needs a warm-up render (first call can be blank)
+        if (isSafari) {
+          await toJpeg(el, captureOptions);
+          await new Promise<void>((r) => setTimeout(r, 120));
+        }
 
-      if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error("Canvas rendered with zero dimensions — PDF aborted.");
+        dataUrl = await toJpeg(el, captureOptions);
+      } finally {
+        // 5. Always restore the off-screen position
+        el.style.left = origLeft;
       }
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      // Measure final image dimensions
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
 
-      let heightLeft = imgHeight;
-      let position = 0;
-      pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
-      heightLeft -= pageHeight;
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
-        heightLeft -= pageHeight;
+      // 6. Build multi-page PDF
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [pageSize.widthMm, pageSize.heightMm],
+        compress: true,
+      });
+
+      const pdfPageWidth = pdf.internal.pageSize.getWidth();
+      const pdfPageHeight = pdf.internal.pageSize.getHeight();
+      const pageHeightPx = pageSize.heightPx;
+
+      // Image height in mm — preserves aspect ratio
+      const imgHeightMm = (img.height * pdfPageWidth) / img.width;
+
+      // Resolve palette background colour for fill rectangles.
+      // Using palette.background (not hardcoded white) so dark/coloured templates
+      // have matching margins and covers on every page.
+      const paletteData = customColors
+        ? { background: customColors.background ?? "#ffffff" }
+        : (palettes.find((p) => p.id === paletteId) ?? palettes[0]);
+      const [bgR, bgG, bgB] = parseColorToRgb(paletteData.background ?? "#ffffff");
+
+      // Section-aware slice positions (same algorithm as the visual preview)
+      const { slices } = calculatePageSlicesBySections(
+        el,
+        pageHeightPx,
+        DEFAULT_PAGE_BOTTOM_SAFE_MARGIN_PX,
+        DEFAULT_PAGE_OVERFLOW_EPSILON_PX,
+      );
+
+      for (let page = 0; page < slices.length; page++) {
+        if (page > 0) pdf.addPage();
+
+        const slice = slices[page];
+        const isContinuation = page > 0;
+
+        // Top margin: continuation pages start rendering PAGE_TOP_CONTINUATION_MARGIN_PX
+        // pixels earlier, then a palette-coloured cover hides the overlap —
+        // identical logic to the visual preview in CVPreview.tsx.
+        const topMarginPx = isContinuation ? PAGE_TOP_CONTINUATION_MARGIN_PX : 0;
+        const effectiveStartPx = Math.max(0, slice.startPx - topMarginPx);
+
+        // Shift image so the correct slice is visible through the PDF page frame
+        const yOffset = -((effectiveStartPx / pageHeightPx) * pdfPageHeight);
+        pdf.addImage(dataUrl, "JPEG", 0, yOffset, pdfPageWidth, imgHeightMm);
+
+        // TOP MARGIN fill — continuation pages only.
+        // Covers the overlap with the previous page's tail (≈ 12.7 mm on A4).
+        if (isContinuation) {
+          const topMarginMm = (topMarginPx / pageHeightPx) * pdfPageHeight;
+          pdf.setFillColor(bgR, bgG, bgB);
+          pdf.rect(0, 0, pdfPageWidth, topMarginMm, "F");
+        }
+
+        // BOTTOM COVER — all pages.
+        // • Non-last: hides the ~64px safe-margin bleed-through from the next page.
+        // • Last:     hides empty space below the final section.
+        // topMarginPx is subtracted from the usable height on continuation pages.
+        const bottomCoverPx = Math.max(
+          0,
+          pageHeightPx - topMarginPx - (slice.endPx - slice.startPx),
+        );
+        if (bottomCoverPx > 0) {
+          const bottomCoverMm = (bottomCoverPx / pageHeightPx) * pdfPageHeight;
+          pdf.setFillColor(bgR, bgG, bgB);
+          pdf.rect(0, pdfPageHeight - bottomCoverMm, pdfPageWidth, bottomCoverMm, "F");
+        }
       }
 
       pdf.save(filename);
+      // Record the export: increments local count + calls global API in production
+      void recordExport();
     } finally {
-      // Always clean up off-screen container — success or error
-      if (offscreen && offscreen.parentNode) {
-        offscreen.parentNode.removeChild(offscreen);
-      }
       setExporting(false);
     }
   };

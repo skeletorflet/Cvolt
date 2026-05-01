@@ -1,27 +1,29 @@
 import type { TemplateProps } from "./index";
-
-const dateRange = (s: string, e: string, current: boolean) =>
-  [s, current ? "Present" : e].filter(Boolean).join(" — ");
+import { AvatarPhoto } from "@/components/AvatarPhoto";
+import { useI18n } from "@/hooks/useI18n";
 
 export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
+  const { m, sectionTitleById } = useI18n();
   const { personal, experience, education, skills, languages, projects, certifications, sectionOrder, hiddenSections } = data;
   const visible = sectionOrder.filter((s) => !hiddenSections.includes(s));
+  const dateRange = (s: string, e: string, current: boolean) =>
+    [s, current ? m.common.present : e].filter(Boolean).join(" — ");
 
   const renderSection = (id: string) => {
     switch (id) {
       case "summary":
         return personal.summary ? (
-          <Section key={id} title="Profile" palette={palette}>
+          <Section key={id} title={sectionTitleById("summary", "Profile")} palette={palette}>
             <p className="text-[10.5pt] leading-[1.55]">{personal.summary}</p>
           </Section>
         ) : null;
       case "experience":
         return experience.length ? (
-          <Section key={id} title="Experience" palette={palette}>
+          <Section key={id} title={sectionTitleById("experience", "Experience")} palette={palette}>
             {experience.map((e) => (
               <div key={e.id} className="mb-3.5 last:mb-0">
                 <div className="flex justify-between items-baseline gap-3">
-                  <h3 className="font-semibold text-[11pt]" style={{ color: palette.primary }}>{e.role || "Role"}</h3>
+                  <h3 className="font-semibold text-[11pt]" style={{ color: palette.primary }}>{e.role || m.common.role}</h3>
                   <span className="text-[9.5pt]" style={{ color: palette.muted }}>{dateRange(e.start, e.end, e.current)}</span>
                 </div>
                 <div className="flex justify-between items-baseline gap-3 mb-1">
@@ -39,7 +41,7 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
         ) : null;
       case "education":
         return education.length ? (
-          <Section key={id} title="Education" palette={palette}>
+          <Section key={id} title={sectionTitleById("education", "Education")} palette={palette}>
             {education.map((e) => (
               <div key={e.id} className="mb-2 last:mb-0">
                 <div className="flex justify-between items-baseline gap-3">
@@ -54,7 +56,7 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
         ) : null;
       case "skills":
         return skills.length ? (
-          <Section key={id} title="Skills" palette={palette}>
+          <Section key={id} title={sectionTitleById("skills", "Skills")} palette={palette}>
             <div className="flex flex-wrap gap-1.5">
               {skills.map((s) => (
                 <span key={s.id} className="text-[9.5pt] px-2 py-0.5 rounded" style={{ backgroundColor: palette.accent + "22", color: palette.primary }}>
@@ -66,7 +68,7 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
         ) : null;
       case "languages":
         return languages.length ? (
-          <Section key={id} title="Languages" palette={palette}>
+          <Section key={id} title={sectionTitleById("languages", "Languages")} palette={palette}>
             <div className="grid grid-cols-2 gap-y-1">
               {languages.map((l) => (
                 <div key={l.id} className="text-[10pt]"><span className="font-medium">{l.name}</span> <span style={{ color: palette.muted }}>— {l.level}</span></div>
@@ -76,7 +78,7 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
         ) : null;
       case "projects":
         return projects.length ? (
-          <Section key={id} title="Projects" palette={palette}>
+          <Section key={id} title={sectionTitleById("projects", "Projects")} palette={palette}>
             {projects.map((p) => (
               <div key={p.id} className="mb-2 last:mb-0">
                 <div className="flex justify-between items-baseline">
@@ -91,7 +93,7 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
         ) : null;
       case "certifications":
         return certifications.length ? (
-          <Section key={id} title="Certifications" palette={palette}>
+          <Section key={id} title={sectionTitleById("certifications", "Certifications")} palette={palette}>
             {certifications.map((c) => (
               <div key={c.id} className="text-[10pt] mb-0.5">
                 <span className="font-medium">{c.name}</span>
@@ -116,12 +118,12 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
       }}
     >
       {/* Header */}
-      <header className="border-b-2 pb-3 mb-4" style={{ borderColor: palette.primary }}>
+      <header className="relative border-b-2 pb-3 pr-[118px] mb-4" style={{ borderColor: palette.primary }}>
         <h1
           className="text-[28pt] font-bold leading-tight tracking-tight"
           style={{ fontFamily: `'${fonts.heading}', serif`, color: palette.primary }}
         >
-          {personal.name || "Your Name"}
+          {personal.name || m.common.yourName}
         </h1>
         {personal.title && (
           <div className="text-[13pt] mt-1" style={{ color: palette.secondary }}>
@@ -136,6 +138,14 @@ export function CorporateTemplate({ data, palette, fonts }: TemplateProps) {
           {personal.github && <span>{personal.github}</span>}
           {personal.website && <span>{personal.website}</span>}
         </div>
+        <AvatarPhoto
+          src={personal.photo}
+          settings={data.avatar}
+          size={96}
+          maxSize={92}
+          borderColorFallback={palette.accent}
+          className="absolute top-0 right-0"
+        />
       </header>
       {visible.map(renderSection)}
     </div>

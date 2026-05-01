@@ -1,7 +1,10 @@
 import type { TemplateProps } from "./index";
 import { ExperienceList, EducationList, SkillsTags, LanguagesList, ProjectsList, CertificationsList } from "./_shared";
+import { AvatarPhoto } from "@/components/AvatarPhoto";
+import { useI18n } from "@/hooks/useI18n";
 
 export function MinimalSwissTemplate({ data, palette, fonts }: TemplateProps) {
+  const { m, sectionTitleLabel } = useI18n();
   const { personal, sectionOrder, hiddenSections } = data;
   const visible = sectionOrder.filter((s) => !hiddenSections.includes(s));
 
@@ -19,14 +22,22 @@ export function MinimalSwissTemplate({ data, palette, fonts }: TemplateProps) {
       className="w-full h-full p-[20mm]"
       style={{ backgroundColor: palette.background, color: palette.text, fontFamily: `'${fonts.body}', sans-serif` }}
     >
-      <header className="mb-8">
+      <header className="relative mb-8 pr-[96px]">
         <h1 className="text-[26pt] font-medium leading-none tracking-tight" style={{ fontFamily: `'${fonts.heading}', sans-serif`, color: palette.primary }}>
-          {personal.name || "Your Name"}
+          {personal.name || m.common.yourName}
         </h1>
         {personal.title && <div className="text-[11pt] mt-2" style={{ color: palette.muted }}>{personal.title}</div>}
+        <AvatarPhoto
+          src={personal.photo}
+          settings={data.avatar}
+          size={84}
+          maxSize={80}
+          borderColorFallback={palette.primary}
+          className="absolute top-0 right-0"
+        />
       </header>
 
-      {block("Contact", (
+      {block(sectionTitleLabel("Contact"), (
         <div className="text-[10pt] space-y-0.5">
           {personal.email && <div>{personal.email}</div>}
           {personal.phone && <div>{personal.phone}</div>}
@@ -39,19 +50,19 @@ export function MinimalSwissTemplate({ data, palette, fonts }: TemplateProps) {
       {visible.map((id) => {
         switch (id) {
           case "summary":
-            return personal.summary ? block("About", <p className="text-[10.5pt] leading-[1.6]">{personal.summary}</p>) : null;
+            return personal.summary ? block(sectionTitleLabel("About"), <p className="text-[10.5pt] leading-[1.6]">{personal.summary}</p>) : null;
           case "experience":
-            return data.experience.length ? block("Work", <ExperienceList data={data} palette={palette} />) : null;
+            return data.experience.length ? block(sectionTitleLabel("Work"), <ExperienceList data={data} palette={palette} />) : null;
           case "education":
-            return data.education.length ? block("Studies", <EducationList data={data} palette={palette} />) : null;
+            return data.education.length ? block(sectionTitleLabel("Studies"), <EducationList data={data} palette={palette} />) : null;
           case "skills":
-            return data.skills.length ? block("Skills", <SkillsTags data={data} palette={palette} />) : null;
+            return data.skills.length ? block(sectionTitleLabel("Skills"), <SkillsTags data={data} palette={palette} />) : null;
           case "languages":
-            return data.languages.length ? block("Lang", <LanguagesList data={data} palette={palette} />) : null;
+            return data.languages.length ? block(sectionTitleLabel("Languages"), <LanguagesList data={data} palette={palette} />) : null;
           case "projects":
-            return data.projects.length ? block("Work", <ProjectsList data={data} palette={palette} />) : null;
+            return data.projects.length ? block(sectionTitleLabel("Projects"), <ProjectsList data={data} palette={palette} />) : null;
           case "certifications":
-            return data.certifications.length ? block("Certs", <CertificationsList data={data} palette={palette} />) : null;
+            return data.certifications.length ? block(sectionTitleLabel("Certifications"), <CertificationsList data={data} palette={palette} />) : null;
           default:
             return null;
         }

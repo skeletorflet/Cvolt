@@ -1,4 +1,5 @@
 import type { CVData } from "@/store/cvStore";
+import type { AppLocale } from "@/store/cvStore";
 
 export const exampleCV: CVData = {
   personal: {
@@ -13,6 +14,14 @@ export const exampleCV: CVData = {
     photo: null,
     summary:
       "Senior product designer with 8+ years crafting intuitive digital experiences for fintech and SaaS. Led design systems that scaled to 200+ engineers, shipped products to 5M+ users, and mentored teams across three continents.",
+  },
+  avatar: {
+    enabled: true,
+    shape: "circle",
+    size: 96,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    effect: "shadow",
   },
   experience: [
     {
@@ -81,4 +90,53 @@ export const exampleCV: CVData = {
   ],
   sectionOrder: ["summary", "experience", "education", "skills", "projects", "languages", "certifications"],
   hiddenSections: [],
+};
+
+export const exampleCVByLocale: Record<AppLocale, CVData> = {
+  en: exampleCV,
+  es: {
+    ...exampleCV,
+    personal: {
+      ...exampleCV.personal,
+      title: "Disenadora Senior de Producto",
+      summary:
+        "Disenadora senior de producto con mas de 8 anos creando experiencias digitales intuitivas para fintech y SaaS. Lidere sistemas de diseno adoptados por mas de 200 ingenieros, lance productos para mas de 5 millones de usuarios y mentorie equipos en tres continentes.",
+    },
+    experience: [
+      {
+        ...exampleCV.experience[0],
+        role: "Disenadora Senior de Producto",
+        description: [
+          "Lidere el rediseno del onboarding, aumentando la activacion en 34% en 12 mercados.",
+          "Construi y lance un sistema de diseno unificado adoptado por 14 equipos de producto.",
+          "Mentorie a 6 disenadores y colabore con research en pruebas de usabilidad semanales.",
+        ],
+      },
+      {
+        ...exampleCV.experience[1],
+        role: "Disenadora de Producto",
+        description: [
+          "Gestione el diseno end-to-end de herramientas para anfitriones usadas por mas de 4 millones de hosts.",
+          "Lance una mejora de accesibilidad que alcanzo WCAG 2.1 AA en los flujos centrales.",
+        ],
+      },
+    ],
+    education: [
+      {
+        ...exampleCV.education[0],
+        details: "Graduacion con honores. Tesis sobre interfaces adaptativas.",
+      },
+    ],
+    languages: [
+      { id: "l1", name: "Ingles", level: "Nativo" },
+      { id: "l2", name: "Espanol", level: "Fluido" },
+      { id: "l3", name: "Frances", level: "Intermedio" },
+    ],
+    projects: [
+      {
+        ...exampleCV.projects[0],
+        description: "Libreria open-source de componentes y tokens utilizada por mas de 30 empresas.",
+      },
+    ],
+  },
 };

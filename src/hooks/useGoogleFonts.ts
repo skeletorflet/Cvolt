@@ -3,10 +3,10 @@ import { fontPairs } from "@/data/fonts";
 
 export function useGoogleFonts() {
   useEffect(() => {
-    if (document.getElementById("cvforge-google-fonts")) return;
+    if (document.getElementById("cvolt-google-fonts")) return;
     const families = fontPairs.map((f) => `family=${f.googleSpec}`).join("&");
     const link = document.createElement("link");
-    link.id = "cvforge-google-fonts";
+    link.id = "cvolt-google-fonts";
     link.rel = "stylesheet";
     link.href = `https://fonts.googleapis.com/css2?${families}&display=swap`;
     document.head.appendChild(link);
