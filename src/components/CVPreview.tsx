@@ -130,22 +130,14 @@ export function CVPreview() {
 
     // Debounce: 1 rAF on desktop (fast), 120ms on mobile (prevents OOM from
     // rapid ResizeObserver firing on an already-constrained device).
-    const isMobileDevice = window.innerWidth < 768;
-    let rafId = 0;
     let timerId = 0;
     const debouncedSync = () => {
-      if (isMobileDevice) {
-        clearTimeout(timerId);
-        timerId = window.setTimeout(syncMeasurement, 120);
-      } else {
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(syncMeasurement);
-      }
+      clearTimeout(timerId);
+      timerId = window.setTimeout(syncMeasurement, window.innerWidth < 768 ? 150 : 80);
     };
     const ro = new ResizeObserver(debouncedSync);
     ro.observe(root);
     return () => {
-      cancelAnimationFrame(rafId);
       clearTimeout(timerId);
       ro.disconnect();
     };
